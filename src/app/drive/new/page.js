@@ -1,21 +1,24 @@
 "use client";
 
 import { useReducer } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Stepper from "@/components/wizard/Stepper.js";
 import UploadStep from "@/components/wizard/UploadStep.js";
+import SkillsStep from "@/components/wizard/SkillsStep.js";
 import RulesStep from "@/components/wizard/RulesStep.js";
 import {
   wizardReducer,
   createInitialState,
 } from "@/lib/wizardReducer.js";
 
-function Placeholder({ title, text, onBack, onNext }) {
+function RunPlaceholder({ onBack }) {
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <p className="mt-2 text-slate-600">{text}</p>
+        <h2 className="text-lg font-semibold">Step 4: Run</h2>
+        <p className="mt-2 text-slate-600">
+          Scoring the resumes arrives on Day 6.
+        </p>
       </section>
       <div className="flex justify-between">
         <button
@@ -25,15 +28,6 @@ function Placeholder({ title, text, onBack, onNext }) {
         >
           <ArrowLeft size={18} /> Back
         </button>
-        {onNext && (
-          <button
-            type="button"
-            onClick={onNext}
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 font-medium text-white hover:bg-indigo-700"
-          >
-            Continue <ArrowRight size={18} />
-          </button>
-        )}
       </div>
     </div>
   );
@@ -56,9 +50,9 @@ export default function NewDrivePage() {
         <UploadStep state={state} dispatch={dispatch} onNext={() => go(2)} />
       )}
       {state.step === 2 && (
-        <Placeholder
-          title="Step 2: Skills"
-          text="Pasting a job description and reviewing the extracted skills arrives on Day 5."
+        <SkillsStep
+          state={state}
+          dispatch={dispatch}
           onBack={() => go(1)}
           onNext={() => go(3)}
         />
@@ -71,13 +65,7 @@ export default function NewDrivePage() {
           onNext={() => go(4)}
         />
       )}
-      {state.step === 4 && (
-        <Placeholder
-          title="Step 4: Run"
-          text="Scoring the resumes arrives on Day 6."
-          onBack={() => go(3)}
-        />
-      )}
+      {state.step === 4 && <RunPlaceholder onBack={() => go(3)} />}
     </div>
   );
 }
