@@ -1,10 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Play,
   Square,
+  Download,
   TriangleAlert,
   CircleCheck,
 } from "lucide-react";
@@ -13,6 +16,8 @@ import { applyRules } from "@/lib/eligibility.js";
 import { normalizeSkills } from "@/lib/skills.js";
 import { runScreening } from "@/lib/runner.js";
 import { rankStudents } from "@/lib/shortlist.js";
+import { saveDrive } from "@/lib/storage.js";
+import { exportDriveToXlsx } from "@/lib/exportXlsx.js";
 
 // Freezes the wizard's choices into a drive object (skills and rules never change after this).
 function buildDrive(state) {
@@ -46,10 +51,12 @@ function Stat({ label, value, tone = "text-slate-900" }) {
 }
 
 export default function RunStep({ state, onBack }) {
+  const router = useRouter();
   const [phase, setPhase] = useState("ready");
   const [progress, setProgress] = useState({ done: 0, total: 0, message: "" });
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const controllerRef = useRef(null);
 
   const evaluated = applyRules(state.students, state.rules);
@@ -63,6 +70,7 @@ export default function RunStep({ state, onBack }) {
     const controller = new AbortController();
     controllerRef.current = controller;
     setError("");
+    setSaveError("");
     setResult(null);
     setProgress({ done: 0, total: drive.students.length, message: "Starting..." });
     setPhase("running");
@@ -73,6 +81,14 @@ export default function RunStep({ state, onBack }) {
         onProgress: setProgress,
         signal: controller.signal,
       });
+      const saved = saveDrive(finished);
+      if (saved.ok) {
+        setResult(saved.drive);
+        setPhase("saved");
+        router.push(`/drive/${saved.drive.id}`);
+        return;
+      }
+      setSaveError(saved.error);
       setResult(finished);
       setPhase("done");
     } catch (err) {
@@ -120,6 +136,22 @@ export default function RunStep({ state, onBack }) {
     );
   }
 
+  if (phase === "saved" && result) {
+    return (
+      <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
+        <p className="flex items-center gap-2 text-lg font-semibold text-emerald-900">
+          <CircleCheck size={20} /> Screening complete and saved
+        </p>
+        <p className="mt-1 text-sm text-emerald-900">
+          Opening your results...{" "}
+          <Link href={`/drive/${result.id}`} className="font-medium underline">
+            Click here if nothing happens
+          </Link>
+        </p>
+      </section>
+    );
+  }
+
   if (phase === "done" && result) {
     const students = result.students;
     const ranked = rankStudents(result);
@@ -132,13 +164,18 @@ export default function RunStep({ state, onBack }) {
 
     return (
       <div className="space-y-6">
-        <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-          <p className="flex items-center gap-2 text-lg font-semibold text-emerald-900">
-            <CircleCheck size={20} /> Screening complete
+        <section className="rounded-xl border border-red-200 bg-red-50 p-6">
+          <p className="flex items-center gap-2 text-lg font-semibold text-red-900">
+            <TriangleAlert size={20} /> Screening complete, but it could not be saved
           </p>
-          <p className="mt-1 text-sm text-emerald-900">
-            Saving, Top N selection and Excel export arrive in the next step.
-          </p>
+          <p className="mt-1 text-sm text-red-900">{saveError}</p>
+          <button
+            type="button"
+            onClick={() => exportDriveToXlsx(result)}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700"
+          >
+            <Download size={18} /> Download Excel (.xlsx)
+          </button>
         </section>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -150,24 +187,11 @@ export default function RunStep({ state, onBack }) {
           <Stat label="Total students" value={students.length} />
         </div>
 
-        {result.warnings.length > 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="flex items-center gap-2 font-medium">
-              <TriangleAlert size={16} /> Notices
-            </p>
-            <ul className="mt-1 list-disc pl-6">
-              {result.warnings.slice(0, 10).map((warning, i) => (
-                <li key={i}>{warning}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Ranked students</h2>
           {ranked.length === 0 ? (
             <p className="mt-2 text-sm text-slate-600">
-              No student could be scored. Check the notices above.
+              No student could be scored.
             </p>
           ) : (
             <div className="mt-3 max-h-[28rem] overflow-auto rounded-lg border border-slate-200">
@@ -178,12 +202,11 @@ export default function RunStep({ state, onBack }) {
                     <th className="px-3 py-2">Student</th>
                     <th className="px-3 py-2">Score</th>
                     <th className="px-3 py-2">Method</th>
-                    <th className="px-3 py-2">Summary</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ranked.map((student, i) => (
-                    <tr key={student.studentId} className="border-t border-slate-200 align-top">
+                    <tr key={student.studentId} className="border-t border-slate-200">
                       <td className="px-3 py-2">{i + 1}</td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         {student.studentId} {student.name}
@@ -191,19 +214,8 @@ export default function RunStep({ state, onBack }) {
                       <td className="px-3 py-2 font-semibold">
                         {student.screening.score}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        {student.screening.method === "ai" ? (
-                          <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-800">
-                            AI
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-800">
-                            Basic match
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-slate-700">
-                        {student.screening.explanation}
+                      <td className="px-3 py-2">
+                        {student.screening.method === "ai" ? "AI" : "Basic match"}
                       </td>
                     </tr>
                   ))}
@@ -242,7 +254,8 @@ export default function RunStep({ state, onBack }) {
         </ul>
         <p className="mt-3 text-sm text-slate-500">
           Scoring uses Google&apos;s free Gemini AI. If it is busy, the app uses a
-          free keyword &quot;Basic match&quot; instead.
+          free keyword &quot;Basic match&quot; instead. The finished drive is saved
+          in this browser only.
         </p>
 
         {phase === "cancelled" && (

@@ -10,9 +10,14 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
+      <body className="flex min-h-screen flex-col bg-slate-50 text-slate-900 antialiased">
         <Header />
-        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+          {children}
+        </main>
+        <footer className="border-t border-slate-200 bg-white py-4 text-center text-sm text-slate-500">
+          Built with Claude as part of the AB Talks 60-Day Claude AI Challenge.
+        </footer>
       </body>
     </html>
   );
