@@ -20,11 +20,19 @@ async function postJson(path, payload) {
       data = null;
     }
     if (response.ok && data) return { ok: true, data };
+
+    // A hosting timeout (504) or crash returns a page, not our JSON. Treat any
+    // server-side failure like that as retryable so the runner tries again.
+    const status = response.status;
     return {
       ok: false,
-      error: data?.error || "The AI request failed",
-      code: data?.code || "SERVER_ERROR",
-      retryable: Boolean(data?.retryable),
+      error:
+        data?.error ||
+        (status === 504
+          ? "The AI took too long to answer"
+          : "The AI request failed"),
+      code: data?.code || (status === 504 ? "AI_TIMEOUT" : "SERVER_ERROR"),
+      retryable: data ? Boolean(data.retryable) : status >= 500,
     };
   } catch (err) {
     if (err?.name === "AbortError") {
@@ -50,7 +58,6 @@ export function extractSkills(jd) {
   return postJson("/api/extract-skills", { jd });
 }
 
-// Used from Day 6 (the route is built then).
 export function scoreResume(payload) {
   return postJson("/api/score-resume", payload);
 }
