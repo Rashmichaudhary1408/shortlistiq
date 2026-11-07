@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -59,6 +59,17 @@ export default function RunStep({ state, onBack }) {
   const [saveError, setSaveError] = useState("");
   const controllerRef = useRef(null);
 
+  // Warn before the tab is closed or reloaded mid-run, because that stops the run.
+  useEffect(() => {
+    if (phase !== "running") return undefined;
+    const warn = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [phase]);
+
   const evaluated = applyRules(state.students, state.rules);
   const eligible = evaluated.filter((s) => s.eligibility.eligible);
   const toScore = eligible.filter((s) => state.fileMap.has(s.studentId)).length;
@@ -112,7 +123,14 @@ export default function RunStep({ state, onBack }) {
     return (
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold">Screening in progress</h2>
-        <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-200">
+        <div
+          role="progressbar"
+          aria-label="Screening progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-200"
+        >
           <div
             className="h-3 rounded-full bg-indigo-600 transition-all"
             style={{ width: `${percent}%` }}
@@ -121,7 +139,9 @@ export default function RunStep({ state, onBack }) {
         <p className="mt-2 text-sm text-slate-700">
           {progress.done} of {progress.total} students processed ({percent}%)
         </p>
-        <p className="mt-1 text-sm text-slate-500">{progress.message}</p>
+        <p aria-live="polite" className="mt-1 text-sm text-slate-500">
+          {progress.message}
+        </p>
         <p className="mt-3 text-sm text-slate-500">
           Keep this tab open. Closing it stops the run.
         </p>
@@ -130,7 +150,7 @@ export default function RunStep({ state, onBack }) {
           onClick={cancel}
           className="mt-4 inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 font-medium text-red-700 hover:bg-red-50"
         >
-          <Square size={16} /> Cancel run
+          <Square size={16} aria-hidden="true" /> Cancel run
         </button>
       </section>
     );
@@ -138,9 +158,13 @@ export default function RunStep({ state, onBack }) {
 
   if (phase === "saved" && result) {
     return (
-      <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-6">
+      <section
+        role="status"
+        className="rounded-xl border border-emerald-200 bg-emerald-50 p-6"
+      >
         <p className="flex items-center gap-2 text-lg font-semibold text-emerald-900">
-          <CircleCheck size={20} /> Screening complete and saved
+          <CircleCheck size={20} aria-hidden="true" /> Screening complete and
+          saved
         </p>
         <p className="mt-1 text-sm text-emerald-900">
           Opening your results...{" "}
@@ -164,9 +188,13 @@ export default function RunStep({ state, onBack }) {
 
     return (
       <div className="space-y-6">
-        <section className="rounded-xl border border-red-200 bg-red-50 p-6">
+        <section
+          role="alert"
+          className="rounded-xl border border-red-200 bg-red-50 p-6"
+        >
           <p className="flex items-center gap-2 text-lg font-semibold text-red-900">
-            <TriangleAlert size={20} /> Screening complete, but it could not be saved
+            <TriangleAlert size={20} aria-hidden="true" /> Screening complete,
+            but it could not be saved
           </p>
           <p className="mt-1 text-sm text-red-900">{saveError}</p>
           <button
@@ -174,7 +202,7 @@ export default function RunStep({ state, onBack }) {
             onClick={() => exportDriveToXlsx(result)}
             className="mt-3 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700"
           >
-            <Download size={18} /> Download Excel (.xlsx)
+            <Download size={18} aria-hidden="true" /> Download Excel (.xlsx)
           </button>
         </section>
 
@@ -198,10 +226,10 @@ export default function RunStep({ state, onBack }) {
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-slate-100 text-slate-600">
                   <tr>
-                    <th className="px-3 py-2">#</th>
-                    <th className="px-3 py-2">Student</th>
-                    <th className="px-3 py-2">Score</th>
-                    <th className="px-3 py-2">Method</th>
+                    <th scope="col" className="px-3 py-2">#</th>
+                    <th scope="col" className="px-3 py-2">Student</th>
+                    <th scope="col" className="px-3 py-2">Score</th>
+                    <th scope="col" className="px-3 py-2">Method</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -259,12 +287,18 @@ export default function RunStep({ state, onBack }) {
         </p>
 
         {phase === "cancelled" && (
-          <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <p
+            role="alert"
+            className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+          >
             The run was cancelled. Nothing was saved. You can start again.
           </p>
         )}
         {phase === "error" && (
-          <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <p
+            role="alert"
+            className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+          >
             {error}
           </p>
         )}
@@ -276,7 +310,7 @@ export default function RunStep({ state, onBack }) {
           onClick={onBack}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 font-medium hover:bg-slate-100"
         >
-          <ArrowLeft size={18} /> Back
+          <ArrowLeft size={18} aria-hidden="true" /> Back
         </button>
         <button
           type="button"
@@ -284,7 +318,7 @@ export default function RunStep({ state, onBack }) {
           disabled={toScore === 0}
           className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <Play size={18} />{" "}
+          <Play size={18} aria-hidden="true" />{" "}
           {phase === "cancelled" || phase === "error"
             ? "Start again"
             : "Start screening"}

@@ -1,9 +1,103 @@
 @import "tailwindcss";
 
+/*
+  Brand palette. The "indigo" utilities used across the app are remapped to a
+  deep teal, so the whole interface changes without editing every component.
+*/
 :root {
   color-scheme: light;
+  --color-indigo-50: #eef7f6;
+  --color-indigo-100: #d5ece9;
+  --color-indigo-200: #aed9d4;
+  --color-indigo-300: #7fc0b9;
+  --color-indigo-400: #4da29a;
+  --color-indigo-500: #2a8680;
+  --color-indigo-600: #1e6f6b;
+  --color-indigo-700: #1a5a58;
+  --color-indigo-800: #174947;
+  --color-indigo-900: #153c3b;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: var(--font-plex), system-ui, -apple-system, "Segoe UI", Roboto,
+    Arial, sans-serif;
+}
+
+/* Visible keyboard focus everywhere. :where() keeps specificity low. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-indigo-600);
+  outline-offset: 2px;
+}
+
+/* Skip link: hidden until a keyboard user tabs to it. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  color: var(--color-indigo-800);
+  font-weight: 600;
+  border-radius: 0 0 0.5rem 0;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* Motion that answers a person's action (opening a panel, showing a message). */
+@keyframes drawer-in {
+  from {
+    transform: translateX(2rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes toast-in {
+  from {
+    transform: translateY(0.5rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.anim-drawer {
+  animation: drawer-in 0.2s ease-out;
+}
+.anim-fade {
+  animation: fade-in 0.15s ease-out;
+}
+.anim-toast {
+  animation: toast-in 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .anim-drawer,
+  .anim-fade,
+  .anim-toast {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }

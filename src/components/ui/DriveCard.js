@@ -15,15 +15,30 @@ function formatDate(iso) {
 }
 
 export default function DriveCard({ entry, onDelete }) {
-  const subtitle = [entry.company, entry.roleTitle].filter(Boolean).join(" · ");
+  const subtitle = entry.company
+    ? `${entry.roleTitle || "Role"} at ${entry.company}`
+    : entry.roleTitle || "";
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div>
-        <h3 className="text-lg font-semibold">{entry.name}</h3>
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-indigo-300">
+      <div className="min-w-0">
+        <h3 className="truncate text-lg font-semibold">{entry.name}</h3>
         {subtitle && <p className="text-sm text-slate-600">{subtitle}</p>}
-        <p className="mt-1 text-sm text-slate-500">
-          {entry.totalCount} students · {entry.eligibleCount} eligible ·{" "}
-          {entry.shortlistedCount} shortlisted · {formatDate(entry.updatedAt)}
+        <p className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-slate-600">
+          <span>
+            <strong className="text-slate-900">{entry.totalCount}</strong>{" "}
+            students
+          </span>
+          <span>
+            <strong className="text-slate-900">{entry.eligibleCount}</strong>{" "}
+            eligible
+          </span>
+          <span>
+            <strong className="text-emerald-700">{entry.shortlistedCount}</strong>{" "}
+            shortlisted
+          </span>
+          <span className="text-slate-500">
+            Updated {formatDate(entry.updatedAt)}
+          </span>
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -35,11 +50,11 @@ export default function DriveCard({ entry, onDelete }) {
         </Link>
         <button
           type="button"
-          onClick={() => onDelete(entry.id)}
+          onClick={() => onDelete(entry)}
           aria-label={`Delete ${entry.name}`}
           className="rounded-lg border border-slate-300 p-2 text-slate-600 hover:bg-red-50 hover:text-red-700"
         >
-          <Trash2 size={16} />
+          <Trash2 size={16} aria-hidden="true" />
         </button>
       </div>
     </div>
