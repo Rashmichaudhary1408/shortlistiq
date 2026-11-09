@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "postinstall": "node scripts/copy-pdf-worker.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",
@@ -26,5 +27,12 @@
     "pdfkit": "^0.20.2",
     "tailwindcss": "^4",
     "vitest": "^5.1.0"
+  },
+  "description": "Rule-based eligibility plus AI-assisted resume matching for campus placement drives",
+  "license": "MIT",
+  "homepage": "https://shortlistiq-sigma.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rashmichaudhary1408/shortlistiq.git"
   }
 }

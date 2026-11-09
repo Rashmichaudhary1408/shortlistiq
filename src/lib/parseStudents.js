@@ -1,10 +1,12 @@
 // Reads the officer's spreadsheet and turns it into clean student objects.
-// parseStudentRows is pure (easy to test). parseStudentsFile reads a File in the browser.
+// parseStudentRows and matrixToRows are pure (easy to test).
+// parseStudentsFile reads a File in the browser.
 
 import { LIMITS } from "./constants.js";
 import { createStudent } from "./driveModel.js";
 
 const MAX_SHEET_BYTES = 5 * 1024 * 1024;
+const HEADER_SCAN_ROWS = 10;
 
 // Accepted header names, compared after lowercasing and removing symbols.
 const HEADER_ALIASES = {
@@ -24,6 +26,8 @@ const HEADER_ALIASES = {
   ],
   resume: ["resume", "resumefile", "resumefilename", "cv", "resumepdf"],
 };
+
+const KNOWN_HEADERS = new Set(Object.values(HEADER_ALIASES).flat());
 
 const FIELD_LABELS = {
   studentId: "Student ID",
@@ -88,7 +92,55 @@ function readNumber(raw, { min, max, integer }, label, dataWarnings) {
   return value;
 }
 
-export function parseStudentRows(rows) {
+// Turns a grid of cells (array of arrays) into row objects. The header row is the
+// first of the top 10 rows that contains at least 3 known column names, so a title
+// line above the headers is skipped. Falls back to the first row.
+// Returns { rows, headerRowIndex } where headerRowIndex is 0-based.
+export function matrixToRows(matrix) {
+  if (!Array.isArray(matrix) || matrix.length === 0) {
+    return { rows: [], headerRowIndex: 0 };
+  }
+
+  let headerRowIndex = -1;
+  const limit = Math.min(matrix.length, HEADER_SCAN_ROWS);
+  for (let i = 0; i < limit; i += 1) {
+    const row = matrix[i];
+    if (!Array.isArray(row)) continue;
+    const known = row.filter((cell) =>
+      KNOWN_HEADERS.has(normalizeHeader(cell))
+    ).length;
+    if (known >= 3) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+  if (headerRowIndex === -1) headerRowIndex = 0;
+
+  const headerCells = Array.isArray(matrix[headerRowIndex])
+    ? matrix[headerRowIndex]
+    : [];
+  const seen = new Map();
+  const headers = headerCells.map((cell, column) => {
+    const text = cleanText(cell) || `Column ${column + 1}`;
+    const count = (seen.get(text) || 0) + 1;
+    seen.set(text, count);
+    return count === 1 ? text : `${text} (${count})`;
+  });
+
+  const rows = matrix.slice(headerRowIndex + 1).map((cells) => {
+    const object = {};
+    headers.forEach((header, column) => {
+      object[header] = Array.isArray(cells) ? cells[column] ?? "" : "";
+    });
+    return object;
+  });
+  return { rows, headerRowIndex };
+}
+
+// options.rowOffset is the number of spreadsheet rows above the header row,
+// so warnings can name the real spreadsheet row.
+export function parseStudentRows(rows, options = {}) {
+  const rowOffset = Number(options.rowOffset) || 0;
   const errors = [];
   const warnings = [];
   const students = [];
@@ -121,7 +173,7 @@ export function parseStudentRows(rows) {
   let limitWarned = false;
 
   rows.forEach((row, index) => {
-    const rowNumber = index + 2; // row 1 is the header
+    const rowNumber = index + 2 + rowOffset; // the header row is above the first data row
     if (isBlankRow(row)) return;
 
     const studentId = cleanText(read(row, "studentId"));
@@ -218,11 +270,13 @@ export async function parseStudentsFile(file) {
     const workbook = XLSX.read(buffer, { type: "array" });
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) return fail("The file has no sheets.");
-    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+    const matrix = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      header: 1,
       defval: "",
       raw: true,
     });
-    return parseStudentRows(rows);
+    const { rows, headerRowIndex } = matrixToRows(matrix);
+    return parseStudentRows(rows, { rowOffset: headerRowIndex });
   } catch {
     return fail("Could not read that file. Is it a valid spreadsheet?");
   }

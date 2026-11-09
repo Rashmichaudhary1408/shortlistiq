@@ -286,6 +286,16 @@ export default function RunStep({ state, onBack }) {
           in this browser only.
         </p>
 
+        {toScore === 0 && (
+          <p
+            role="status"
+            className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+          >
+            Nothing to score yet. No eligible student has a resume PDF. Go back
+            to upload the resumes, or loosen the rules.
+          </p>
+        )}
+
         {phase === "cancelled" && (
           <p
             role="alert"

@@ -31,9 +31,12 @@ function variantsFor(name) {
   return [...variants].filter(Boolean);
 }
 
+// Whole-word match without regex lookbehind, which older Safari cannot parse.
 function mentions(textLower, name) {
   return variantsFor(name).some((variant) =>
-    new RegExp(`(?<![a-z0-9])${escapeRegex(variant)}(?![a-z0-9])`).test(textLower)
+    new RegExp(`(?:^|[^a-z0-9])${escapeRegex(variant)}(?![a-z0-9])`).test(
+      textLower
+    )
   );
 }
 

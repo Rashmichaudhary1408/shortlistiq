@@ -9,6 +9,9 @@ import { scoreResume as realScoreResume } from "./aiClient.js";
 const RETRY_WAITS_MS = [2000, 4000];
 const PAUSE_AFTER_RATE_LIMITS_MS = 10000;
 const CONCURRENCY = 2;
+// After this many students in a row end on Basic match because the AI failed,
+// the AI is skipped for the rest of the run, so the run still finishes quickly.
+const BREAKER_THRESHOLD = 3;
 
 function cancelledError() {
   const err = new Error("Run cancelled");
@@ -60,6 +63,9 @@ export async function runScreening(
   let usedFallbackCount = 0;
   let consecutiveRateLimits = 0;
   let pausedOnce = false;
+  let failureStreak = 0;
+  let breakerOpen = false;
+  let skippedByBreaker = 0;
 
   const report = (message) => {
     if (onProgress) onProgress({ done, total, message });
@@ -123,28 +129,45 @@ export async function runScreening(
     const payload = { roleTitle: drive.roleTitle, skills, resumeText: text };
 
     let data = null;
-    for (let attempt = 0; attempt <= RETRY_WAITS_MS.length; attempt += 1) {
-      check();
-      const response = await scoreResume(payload);
-      check();
-      if (response.ok) {
-        consecutiveRateLimits = 0;
-        data = response.data;
-        break;
-      }
-      if (response.code === "RATE_LIMITED" || response.code === "AI_RATE_LIMITED") {
-        consecutiveRateLimits += 1;
-        if (consecutiveRateLimits >= 3 && !pausedOnce) {
-          pausedOnce = true;
-          report("The AI is busy. Pausing for 10 seconds...");
-          await sleep(PAUSE_AFTER_RATE_LIMITS_MS, signal);
+    if (breakerOpen) {
+      skippedByBreaker += 1;
+    } else {
+      for (let attempt = 0; attempt <= RETRY_WAITS_MS.length; attempt += 1) {
+        check();
+        const response = await scoreResume(payload);
+        check();
+        if (response.ok) {
+          consecutiveRateLimits = 0;
+          data = response.data;
+          break;
+        }
+        if (
+          response.code === "RATE_LIMITED" ||
+          response.code === "AI_RATE_LIMITED"
+        ) {
+          consecutiveRateLimits += 1;
+          if (consecutiveRateLimits >= 3 && !pausedOnce) {
+            pausedOnce = true;
+            report("The AI is busy. Pausing for 10 seconds...");
+            await sleep(PAUSE_AFTER_RATE_LIMITS_MS, signal);
+            consecutiveRateLimits = 0;
+          }
+        } else {
           consecutiveRateLimits = 0;
         }
-      } else {
-        consecutiveRateLimits = 0;
+        if (!response.retryable || attempt === RETRY_WAITS_MS.length) break;
+        await sleep(RETRY_WAITS_MS[attempt], signal);
       }
-      if (!response.retryable || attempt === RETRY_WAITS_MS.length) break;
-      await sleep(RETRY_WAITS_MS[attempt], signal);
+
+      if (data) {
+        failureStreak = 0;
+      } else {
+        failureStreak += 1;
+        if (failureStreak >= BREAKER_THRESHOLD) {
+          breakerOpen = true;
+          report("The AI keeps failing. Using Basic match for the rest.");
+        }
+      }
     }
 
     if (data) {
@@ -196,6 +219,11 @@ export async function runScreening(
   if (usedFallbackCount > 0) {
     warnings.push(
       `The AI was busy for ${usedFallbackCount} resume(s). Basic match (keyword search) was used for them.`
+    );
+  }
+  if (skippedByBreaker > 0) {
+    warnings.push(
+      `The AI kept failing, so it was paused. Basic match was used for ${skippedByBreaker} more resume(s) without trying the AI.`
     );
   }
   const unreadable = students.filter((s) => s.resume.status === "unreadable").length;

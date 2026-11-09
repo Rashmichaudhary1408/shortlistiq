@@ -5,6 +5,11 @@ import { generateJson, getGeminiConfig } from "@/lib/server/gemini.js";
 export const maxDuration = 30;
 export const dynamic = "force-dynamic";
 
+// A good answer is reused for 60 seconds so that refreshing this public page
+// cannot burn the free Gemini allowance. Errors are never cached.
+const CACHE_MS = 60 * 1000;
+let cached = null;
+
 const HEALTH_SCHEMA = {
   type: "OBJECT",
   properties: {
@@ -21,6 +26,10 @@ export async function GET(request) {
   });
   if (!guard.ok) return guard.response;
 
+  if (cached && Date.now() - cached.at < CACHE_MS) {
+    return NextResponse.json({ ...cached.body, cached: true });
+  }
+
   try {
     const { model } = getGeminiConfig();
     const result = await generateJson({
@@ -29,11 +38,9 @@ export async function GET(request) {
       schema: HEALTH_SCHEMA,
       temperature: 0,
     });
-    return NextResponse.json({
-      ok: true,
-      model,
-      reply: String(result?.reply ?? ""),
-    });
+    const body = { ok: true, model, reply: String(result?.reply ?? "") };
+    cached = { at: Date.now(), body };
+    return NextResponse.json(body);
   } catch (err) {
     return toErrorResponse(err, { ok: false });
   }

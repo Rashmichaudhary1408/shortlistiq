@@ -1,7 +1,14 @@
 import "./globals.css";
+import Link from "next/link";
 import { IBM_Plex_Sans } from "next/font/google";
 import Header from "@/components/layout/Header.js";
 import { ToastProvider } from "@/components/ui/Toast.js";
+import {
+  SITE_URL,
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_DESCRIPTION,
+} from "@/lib/site.js";
 
 const plex = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -11,9 +18,31 @@ const plex = IBM_Plex_Sans({
 });
 
 export const metadata = {
-  title: "ShortlistIQ",
-  description:
-    "Rule-based eligibility plus AI-assisted resume matching for campus placement drives.",
+  metadataBase: new URL(SITE_URL),
+  title: { default: SITE_TITLE, template: `%s | ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: [
+    "campus placement",
+    "resume screening",
+    "student shortlisting",
+    "eligibility rules",
+    "placement cell",
+  ],
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  robots: { index: true, follow: true },
 };
 
 export const viewport = {
@@ -39,7 +68,18 @@ export default function RootLayout({ children }) {
             {children}
           </main>
           <footer className="border-t border-slate-200 bg-white py-4 text-center text-sm text-slate-500">
-            Built with Claude as part of the AB Talks 60-Day Claude AI Challenge.
+            <p>
+              Built with Claude as part of the AB Talks 60-Day Claude AI
+              Challenge.
+            </p>
+            <p className="mt-1">
+              <Link
+                href="/privacy"
+                className="underline underline-offset-2 hover:text-slate-800"
+              >
+                Privacy and data
+              </Link>
+            </p>
           </footer>
         </ToastProvider>
       </body>

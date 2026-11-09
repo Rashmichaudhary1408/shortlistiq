@@ -16,9 +16,12 @@ function FileList({ title, items }) {
   if (!items || items.length === 0) return null;
   const shown = items.slice(0, 8);
   return (
-    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+    <div
+      role="status"
+      className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+    >
       <p className="flex items-center gap-2 font-medium">
-        <TriangleAlert size={16} /> {title}
+        <TriangleAlert size={16} aria-hidden="true" /> {title}
       </p>
       <ul className="mt-1 list-disc pl-6">
         {shown.map((item, i) => (
@@ -116,23 +119,30 @@ export default function UploadStep({ state, dispatch, onNext }) {
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <FileSpreadsheet size={20} /> 1. Student spreadsheet
+          <FileSpreadsheet size={20} aria-hidden="true" /> 1. Student spreadsheet
         </h2>
         <p className="mt-1 text-sm text-slate-600">
           .xlsx, .xls or .csv with columns: Student ID, Name, Branch, CGPA,
-          Backlogs, Graduation Year (and optionally Resume).
+          Backlogs, Graduation Year (and optionally Resume). A title line above
+          the column names is fine.
         </p>
         <input
           type="file"
           accept=".xlsx,.xls,.csv"
+          aria-label="Choose the student spreadsheet (.xlsx, .xls or .csv)"
           onChange={handleSheet}
           className="mt-3 block w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:text-white hover:file:bg-indigo-700"
         />
-        {busy && <p className="mt-3 text-sm text-slate-500">Reading file...</p>}
+        {busy && (
+          <p role="status" className="mt-3 text-sm text-slate-500">
+            Reading file...
+          </p>
+        )}
 
         {state.sheetErrors.map((message) => (
           <p
             key={message}
+            role="alert"
             className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
           >
             {message}
@@ -140,9 +150,12 @@ export default function UploadStep({ state, dispatch, onNext }) {
         ))}
 
         {total > 0 && (
-          <p className="mt-3 flex items-center gap-2 text-sm text-emerald-700">
-            <CircleCheck size={16} /> {state.sheetName}: {total} students
-            imported
+          <p
+            role="status"
+            className="mt-3 flex items-center gap-2 text-sm text-emerald-700"
+          >
+            <CircleCheck size={16} aria-hidden="true" /> {state.sheetName}:{" "}
+            {total} students imported
           </p>
         )}
         <FileList title="Import notices" items={state.sheetWarnings} />
@@ -151,17 +164,18 @@ export default function UploadStep({ state, dispatch, onNext }) {
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <FileText size={20} /> 2. Resume PDFs
+          <FileText size={20} aria-hidden="true" /> 2. Resume PDFs
         </h2>
         <p className="mt-1 text-sm text-slate-600">
           Name each file after the Student ID, for example 23CS001.pdf. Select
-          many files at once (Ctrl+A in the file window).
+          many files at once (click once in the file window, then press Ctrl+A).
         </p>
         <input
           type="file"
           accept=".pdf,application/pdf"
           multiple
           disabled={total === 0}
+          aria-label="Choose the resume PDF files"
           onChange={handlePdfs}
           className="mt-3 block w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:text-white hover:file:bg-indigo-700 disabled:opacity-50"
         />
@@ -172,7 +186,7 @@ export default function UploadStep({ state, dispatch, onNext }) {
         )}
 
         {state.pdfFiles.length > 0 && (
-          <p className="mt-3 text-sm text-slate-700">
+          <p role="status" className="mt-3 text-sm text-slate-700">
             {state.pdfFiles.length} PDFs selected. Matched:{" "}
             <strong className="text-emerald-700">{found}</strong>. Students
             without a resume: <strong className="text-amber-700">{missing}</strong>.
@@ -201,7 +215,7 @@ export default function UploadStep({ state, dispatch, onNext }) {
           disabled={!canLeaveUpload(state)}
           className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Continue <ArrowRight size={18} />
+          Continue <ArrowRight size={18} aria-hidden="true" />
         </button>
       </div>
     </div>

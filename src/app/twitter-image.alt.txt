@@ -1,0 +1,1 @@
+ShortlistIQ: shortlist students with reasons you can show. An example result with one shortlisted student, one eligible student and one student who failed a rule.

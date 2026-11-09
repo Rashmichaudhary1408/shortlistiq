@@ -13,7 +13,12 @@ export class GeminiError extends Error {
   }
 }
 
-const ATTEMPT_TIMEOUT_MS = 25000;
+// Vercel stops a function after 30 seconds (maxDuration). Every call plans its
+// time inside this budget, so we always answer with our own clean error instead
+// of a bare platform timeout.
+const TOTAL_BUDGET_MS = 27000;
+const MAX_ATTEMPT_MS = 24000;
+const MIN_RETRY_MS = 6000;
 const RETRY_WAIT_MS = 2000;
 
 export function getGeminiConfig() {
@@ -89,13 +94,16 @@ function parseJsonText(text) {
 }
 
 // Sends one prompt to Gemini in JSON mode and returns the parsed object.
-// Retries once (after 2 s) on a busy or temporarily unavailable AI.
+// Retries once (after 2 s) on a busy or temporarily unavailable AI, but only
+// when enough of the time budget is left.
 export async function generateJson({ prompt, schema, temperature = 0 }) {
   const { apiKey, model } = getGeminiConfig();
   const ai = new GoogleGenAI({ apiKey });
   const started = Date.now();
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const remaining = TOTAL_BUDGET_MS - (Date.now() - started);
+    const attemptMs = Math.max(1000, Math.min(MAX_ATTEMPT_MS, remaining));
     try {
       const response = await withTimeout(
         ai.models.generateContent({
@@ -107,17 +115,21 @@ export async function generateJson({ prompt, schema, temperature = 0 }) {
             responseSchema: schema,
           },
         }),
-        ATTEMPT_TIMEOUT_MS
+        attemptMs
       );
       return parseJsonText(response.text);
     } catch (err) {
       const failure = classify(err);
       const status = Number(err?.status ?? err?.code ?? 0);
-      const canRetry =
+      const worthRetrying =
         attempt === 1 && (failure.status === 429 || status === 503);
-      if (canRetry) {
-        await sleep(RETRY_WAIT_MS);
-        continue;
+      if (worthRetrying) {
+        const timeLeft =
+          TOTAL_BUDGET_MS - (Date.now() - started) - RETRY_WAIT_MS;
+        if (timeLeft >= MIN_RETRY_MS) {
+          await sleep(RETRY_WAIT_MS);
+          continue;
+        }
       }
       // Log only the code, upstream status and duration. Never log prompt or resume text.
       console.error(

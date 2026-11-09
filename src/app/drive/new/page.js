@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer } from "react";
+import { useEffect, useReducer } from "react";
 import Stepper from "@/components/wizard/Stepper.js";
 import UploadStep from "@/components/wizard/UploadStep.js";
 import SkillsStep from "@/components/wizard/SkillsStep.js";
@@ -19,9 +19,23 @@ export default function NewDrivePage() {
   );
   const go = (step) => dispatch({ type: "GO_TO_STEP", payload: { step } });
 
+  // Everything in this wizard lives in memory only, so warn before a reload or
+  // closed tab throws away uploaded files and choices.
+  const hasWork =
+    state.students.length > 0 || state.jdText.trim().length > 0;
+  useEffect(() => {
+    if (!hasWork) return undefined;
+    const warn = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasWork]);
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">New drive</h1>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight">New drive</h1>
       <Stepper current={state.step} />
 
       {state.step === 1 && (

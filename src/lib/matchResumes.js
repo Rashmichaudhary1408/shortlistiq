@@ -6,6 +6,13 @@ function lower(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
+// "resumes\23CS001.pdf" and "folder/23CS001" both become a bare file name.
+function nameFromColumn(value) {
+  const base = lower(String(value ?? "").split(/[\\/]/).pop());
+  if (!base) return "";
+  return base.endsWith(".pdf") ? base : `${base}.pdf`;
+}
+
 export function matchResumes(students, files) {
   const accepted = new Map(); // lowercase file name -> file
   const rejectedFiles = [];
@@ -30,9 +37,10 @@ export function matchResumes(students, files) {
   const fileMap = new Map(); // studentId -> File
 
   const updated = students.map((student) => {
-    const candidates = [student.resumeFile, `${student.studentId}.pdf`]
-      .map(lower)
-      .filter(Boolean);
+    const candidates = [
+      nameFromColumn(student.resumeFile),
+      lower(`${student.studentId}.pdf`),
+    ].filter(Boolean);
     const key = candidates.find((c) => accepted.has(c) && !used.has(c));
     if (key) {
       used.add(key);
