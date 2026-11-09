@@ -34,7 +34,6 @@ export const metadata = {
     siteName: SITE_NAME,
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    url: "/",
     locale: "en_US",
   },
   twitter: {
