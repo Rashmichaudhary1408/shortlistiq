@@ -2,10 +2,12 @@
 
 Shortlist students with reasons you can show. Rules decide who is eligible. AI only checks how well each resume fits.
 
-**Live app:** https://shortlistiq-sigma.vercel.app/
+**Live app:** https://shortlistiq-sigma.vercel.app/ (use fake data only)
 **Privacy and data:** https://shortlistiq-sigma.vercel.app/privacy
 
 Built with Claude as part of the AB Talks 60-Day Claude AI Challenge. Everything runs on free tools. No paid service and no Anthropic API key is needed.
+
+![ShortlistIQ home page with an example result](docs/screenshots/home.png)
 
 ## What it does
 
@@ -14,6 +16,10 @@ Built with Claude as part of the AB Talks 60-Day Claude AI Challenge. Everything
 3. **Rules:** set minimum CGPA, allowed branches, maximum backlogs and graduation year. Every failed rule is recorded for each student.
 4. **Run:** eligible resumes are read in your browser and scored. Students who fail a rule are never sent to the AI.
 5. **Results:** a ranked list, a Top N shortlist, manual Add and Remove, evidence for every score, and an Excel export with three sheets.
+
+![Results page with scores, filters and the shortlist](docs/screenshots/results.png)
+
+![Detail panel showing the evidence behind a score](docs/screenshots/detail.png)
 
 ## How it works
 
@@ -48,8 +54,21 @@ The short version. The full beginner guide is in [docs/SETUP.md](docs/SETUP.md).
 - `src/components/`: wizard steps, results screens and shared UI
 - `src/lib/`: pure logic (parsing, rules, scoring, ranking, storage, export)
 - `src/lib/server/`: server-only code (Gemini wrapper, prompts, request guard)
-- `tests/`: Vitest tests for the logic modules
-- `docs/`: setup, environment and test notes
+- `tests/`: Vitest tests for the logic modules (115 tests)
+- `docs/`: guides, plans and the project story
+
+## Documentation
+
+| Document | What it is |
+|---|---|
+| [docs/SETUP.md](docs/SETUP.md) | Step-by-step setup for beginners |
+| [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Every setting, tool, limit and error code |
+| [docs/future-scope.md](docs/future-scope.md) | Where the project could go in 3, 6 and 12 months |
+| [docs/30-day-growth-plan.md](docs/30-day-growth-plan.md) | A day-by-day plan for the next month |
+| [docs/challenge-retrospective.md](docs/challenge-retrospective.md) | How the project was built, and what it taught |
+| [docs/portfolio.md](docs/portfolio.md) | Descriptions, resume bullets and a demo script |
+| [CHANGELOG.md](CHANGELOG.md) | What changed in each version |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to help |
 
 ## Security notes
 
